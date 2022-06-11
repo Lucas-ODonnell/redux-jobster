@@ -3,6 +3,7 @@ import { toast } from "react-toastify";
 import customFetch from "../../utils/axios";
 import { getUserFromLocalStorage } from "../../utils/localStorage";
 import { logoutUser } from "../user/userSlice";
+import { showLoading, hideLoading, getAllJobs } from "../allJobs/allJobsSlice";
 
 const initialState = {
   isLoading: false,
@@ -38,6 +39,50 @@ export const createJob = createAsyncThunk(
   }
 );
 
+export const editJob = createAsyncThunk(
+  "job/editJob",
+  async ({ jobId, job }, thunkAPI) => {
+    try {
+      const response = await customFetch.patch(`/jobs/${jobId}`, job, {
+        headers: {
+          authorization: `Bearer ${thunkAPI.getState().user.user.token}`,
+        },
+      });
+      thunkAPI.dispatch(clearValues());
+      return response.data;
+    } catch (error) {
+      if (error.response.status === 401) {
+        thunkAPI.dispatch(logoutUser());
+        return thunkAPI.rejectWithValue("Unauthorized, logging out...");
+      }
+      return thunkAPI.rejectWithValue(error.response.data.msg);
+    }
+  }
+);
+
+export const deleteJob = createAsyncThunk(
+  "job/deleteJob",
+  async (jobID, thunkAPI) => {
+    thunkAPI.dispatch(showLoading());
+    try {
+      const response = await customFetch.delete(`/jobs/${jobID}`, {
+        headers: {
+          authorization: `Bearer ${thunkAPI.getState().user.user.token}`,
+        },
+      });
+      thunkAPI.dispatch(getAllJobs());
+      return response.data.msg;
+    } catch (error) {
+      thunkAPI.dispatch(hideLoading());
+      if (error.response.status === 401) {
+        thunkAPI.dispatch(logoutUser());
+        return thunkAPI.rejectWithValue("Unauthorized, logging out...");
+      }
+      return thunkAPI.rejectWithValue(error.response.data.msg);
+    }
+  }
+);
+
 const jobSlice = createSlice({
   name: "job",
   initialState,
@@ -51,21 +96,41 @@ const jobSlice = createSlice({
         jobLocation: getUserFromLocalStorage()?.location || "",
       };
     },
-    extraReducers: {
-      [createJob.pending]: (state) => {
-        state.isLoading = true;
-      },
-      [createJob.fulfilled]: (state) => {
-        state.isLoading = false;
-        toast.success("Job Created");
-      },
-      [createJob.rejected]: (state, { payload }) => {
-        state.isLoading = false;
-        toast.error(payload);
-      },
+    setEditJob: (state, { payload }) => {
+      return { ...state, isEditing: true, ...payload };
+    },
+  },
+  extraReducers: {
+    [createJob.pending]: (state) => {
+      state.isLoading = true;
+    },
+    [createJob.fulfilled]: (state) => {
+      state.isLoading = false;
+      toast.success("Job Created");
+    },
+    [createJob.rejected]: (state, { payload }) => {
+      state.isLoading = false;
+      toast.error(payload);
+    },
+    [editJob.pending]: (state) => {
+      state.isLoading = true;
+    },
+    [editJob.fulfilled]: (state) => {
+      state.isLoading = false;
+      toast.success("Job modified");
+    },
+    [editJob.rejected]: (state, { payload }) => {
+      state.isLoading = false;
+      toast.error(payload);
+    },
+    [deleteJob.fulfilled]: (state, { payload }) => {
+      toast.success(payload);
+    },
+    [deleteJob.rejected]: (state, { payload }) => {
+      toast.error(payload);
     },
   },
 });
 
-export const { handleChange, clearValues } = jobSlice.actions;
+export const { handleChange, clearValues, setEditJob } = jobSlice.actions;
 export default jobSlice.reducer;
