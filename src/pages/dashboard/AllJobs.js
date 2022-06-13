@@ -1,11 +1,16 @@
 import React from "react";
-import { JobsContainer, SearchContainer } from "../../components";
+import {
+  JobsContainer,
+  SearchContainer,
+  PageBtnContainer,
+} from "../../components";
 
 const AllJobs = () => {
   return (
     <>
       <SearchContainer />
       <JobsContainer />
+      <PageBtnContainer />
     </>
   );
 };
