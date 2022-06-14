@@ -1,7 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { toast } from "react-toastify";
-import { logoutUser } from "../user/userSlice";
-import customFetch from "../../utils/axios";
+import { getAllJobsThunk, showStatsThunk } from "./allJobsThunk";
 
 const initialFilterState = {
   search: "",
@@ -22,35 +21,9 @@ const initialState = {
   ...initialFilterState,
 };
 
-export const getAllJobs = createAsyncThunk(
-  "allJobs/getJobs",
-  async (_, thunkAPI) => {
-    let url = `/jobs`;
-    try {
-      const response = await customFetch.get(url);
-      return response.data;
-    } catch (error) {
-      if (error.response.status === 401) {
-        thunkAPI.dispatch(logoutUser());
-        return thunkAPI.rejectWithValue("Unauthorized, logging out...");
-      }
-      return thunkAPI.rejectWithValue(error.response.data.msg);
-    }
-  }
-);
+export const getAllJobs = createAsyncThunk("allJobs/getJobs", getAllJobsThunk);
 
-export const showStats = createAsyncThunk(
-  "allJobs/showStats",
-  async (_, thunkAPI) => {
-    try {
-      const response = await customFetch.get("jobs/stats");
-      console.log(response.data);
-      return response.data;
-    } catch (error) {
-      return thunkAPI.rejectWithValue(error.response.data.msg);
-    }
-  }
-);
+export const showStats = createAsyncThunk("allJobs/showStats", showStatsThunk);
 
 const allJobsSlice = createSlice({
   name: "allJobs",
@@ -63,6 +36,7 @@ const allJobsSlice = createSlice({
       state.isLoading = false;
     },
     handleChange: (state, { payload: { name, value } }) => {
+      state.page = 1;
       state[name] = value;
     },
     clearFilters: (state) => {
@@ -71,6 +45,7 @@ const allJobsSlice = createSlice({
     changePage: (state, { payload }) => {
       state.page = payload;
     },
+    clearAllJobsState: (state) => initialState,
   },
   extraReducers: {
     [getAllJobs.pending]: (state) => {
@@ -107,5 +82,6 @@ export const {
   handleChange,
   clearFilters,
   changePage,
+  clearAllJobsState,
 } = allJobsSlice.actions;
 export default allJobsSlice.reducer;
